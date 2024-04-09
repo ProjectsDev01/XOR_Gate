@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Sigmoidalna funkcja aktywacji
 def sigmoid(x):
@@ -21,6 +22,11 @@ class NN:
         self.momentum = momentum
         self.prev_wi_delta = np.zeros((self.li, self.l))
         self.prev_wh_delta = np.zeros((self.l, 1))
+
+        self.train_errors_mse = []  # Lista do przechowywania błędów MSE na zbiorze uczącym
+        self.train_errors_classification = []  # Lista do przechowywania błędów klasyfikacji na zbiorze uczącym
+        self.wi_history = []  # Historia wag w warstwie ukrytej
+        self.wh_history = []  # Historia wag w warstwie wyjściowej
 
     def think(self, inp):
         s1 = sigmoid(np.dot(inp, self.wi))
@@ -47,6 +53,15 @@ class NN:
 
                 # Obliczanie bieżącego MSE
                 current_mse = np.mean(np.square(mini_batch_outputs - l2))
+                self.train_errors_mse.append(current_mse)  # Dodanie błędu MSE do listy
+
+                # Obliczanie bieżącego błędu klasyfikacji
+                classification_error = np.mean(np.abs(np.round(l2) - mini_batch_outputs))
+                self.train_errors_classification.append(classification_error)  # Dodanie błędu klasyfikacji do listy
+
+                # Zapisywanie wag do historii
+                self.wi_history.append(np.copy(self.wi))
+                self.wh_history.append(np.copy(self.wh))
 
                 # Sprawdzenie, czy osiągnęliśmy docelową wartość MSE
                 if current_mse < target_mse:
@@ -78,3 +93,42 @@ n = NN(inputs, learning_rate=0.2, momentum=0.9)  # Ustawienie początkowego wsp�
 print("Predicted :", n.think(inputs))
 n.train(inputs, outputs, it=10000, target_mse=0.01, batch_size=2)
 print("Trained :", n.think(inputs))
+
+# Wykreślenie błędów MSE i klasyfikacji
+plt.figure(figsize=(10, 5))
+
+plt.subplot(2, 2, 1)
+plt.plot(range(len(n.train_errors_mse)), n.train_errors_mse, label='Training MSE')
+plt.xlabel('Iterations')
+plt.ylabel('MSE')
+plt.title('Training MSE over Iterations')
+plt.legend()
+
+plt.subplot(2, 2, 2)
+plt.plot(range(len(n.train_errors_classification)), n.train_errors_classification, color='orange', label='Classification Error')
+plt.xlabel('Iterations')
+plt.ylabel('Classification Error')
+plt.title('Classification Error over Iterations')
+plt.legend()
+
+# Wykreślenie wag
+wi_history = np.array(n.wi_history)
+wh_history = np.array(n.wh_history)
+
+plt.subplot(2, 2, 3)
+for i in range(wi_history.shape[1]):
+    plt.plot(range(wi_history.shape[0]), wi_history[:, i], label=f'Weight {i}')
+plt.xlabel('Iterations')
+plt.ylabel('Weight Value')
+plt.title('Hidden Layer Weights over Iterations')
+plt.legend()
+
+plt.subplot(2, 2, 4)
+plt.plot(range(wh_history.shape[0]), wh_history[:, 0], label='Weight')
+plt.xlabel('Iterations')
+plt.ylabel('Weight Value')
+plt.title('Output Layer Weights over Iterations')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
